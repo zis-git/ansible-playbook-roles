@@ -1,0 +1,22 @@
+---
+- name: Prepare instances (install python3)
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install python3 on Debian/Ubuntu (if apt exists)
+      ansible.builtin.raw: |
+        set -e
+        if command -v apt-get >/dev/null 2>&1; then
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y python3 python3-apt curl ca-certificates gnupg apt-transport-https
+        fi
+      changed_when: true
+
+    - name: Install python3 on RedHat/Oracle (if yum exists)
+      ansible.builtin.raw: |
+        set -e
+        if command -v yum >/dev/null 2>&1; then
+          yum install -y python3 python3-libselinux curl ca-certificates yum-utils
+        fi
+      changed_when: true

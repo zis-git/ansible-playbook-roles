@@ -1,0 +1,84 @@
+---
+# Автоопределение архитектуры и установка Vector соответствующего пакета (.deb / .rpm)
+
+- name: Map architecture
+  ansible.builtin.set_fact:
+    vector_arch_map:
+      x86_64:
+        deb: amd64
+        rpm: x86_64
+      amd64:
+        deb: amd64
+        rpm: x86_64
+      aarch64:
+        deb: arm64
+        rpm: aarch64
+      arm64:
+        deb: arm64
+        rpm: aarch64
+
+- name: Detect normalized arch
+  ansible.builtin.set_fact:
+    vector_arch_deb: "{{ (vector_arch_map[ansible_facts.architecture] | default(vector_arch_map['x86_64'])).deb }}"
+    vector_arch_rpm: "{{ (vector_arch_map[ansible_facts.architecture] | default(vector_arch_map['x86_64'])).rpm }}"
+
+# Debian/Ubuntu: ставим зависимости и .deb под нужную архитектуру
+- name: Ensure deps present (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+    update_cache: true
+    state: present
+  when: ansible_facts.os_family == "Debian"
+
+- name: Download Vector .deb
+  ansible.builtin.get_url:
+    url: "https://packages.timber.io/vector/{{ vector_version }}/vector_{{ vector_version }}-1_{{ vector_arch_deb }}.deb"
+    dest: "/tmp/vector_{{ vector_version }}-1_{{ vector_arch_deb }}.deb"
+    mode: "0644"
+  when: ansible_facts.os_family == "Debian"
+
+- name: Install Vector from .deb
+  ansible.builtin.apt:
+    deb: "/tmp/vector_{{ vector_version }}-1_{{ vector_arch_deb }}.deb"
+  when: ansible_facts.os_family == "Debian"
+
+# RedHat/OracleLinux: ставим зависимости и .rpm под нужную архитектуру
+- name: Ensure deps present (RedHat/Oracle)
+  ansible.builtin.yum:
+    name:
+      - curl
+      - ca-certificates
+    state: present
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Install Vector from .rpm (remote URL)
+  ansible.builtin.yum:
+    name: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-1.{{ vector_arch_rpm }}.rpm"
+    state: present
+    disable_gpg_check: true
+  when: ansible_facts.os_family == "RedHat"
+
+# Общие шаги
+- name: Create config dir
+  ansible.builtin.file:
+    path: "{{ vector_config_path | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy config
+  ansible.builtin.copy:
+    dest: "{{ vector_config_path }}"
+    mode: "0644"
+    content: |
+      sources:
+        dummy:
+          type: "stdin"
+
+      sinks:
+        console:
+          type: "console"
+          inputs: ["dummy"]
+          encoding:
+            codec: "text"

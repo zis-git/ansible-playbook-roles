@@ -1,0 +1,35 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: ubuntu_latest
+    image: ubuntu:latest
+    pre_build_image: true
+    privileged: true
+  - name: oraclelinux8
+    image: oraclelinux:8
+    pre_build_image: true
+    privileged: true
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      remote_tmp: /tmp
+  config_options:
+    defaults:
+      remote_tmp: /tmp
+  inventory:
+    hosts:
+      all:
+        vars:
+          ansible_connection: docker
+          ansible_user: root
+          vector_config_path: "/etc/vector/vector.yaml"
+
+# В Molecule 6 verify запускается автоматически,
+# будет использован файл verify.yml в каталоге сценария.

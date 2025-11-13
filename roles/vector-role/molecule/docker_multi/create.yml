@@ -1,0 +1,26 @@
+---
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Pull required images
+      community.docker.docker_image:
+        name: "{{ item.image }}"
+        source: pull
+      loop:
+        - { name: "ubuntu_latest",   image: "ubuntu:latest" }
+        - { name: "oraclelinux8",    image: "oraclelinux:8" }
+
+    - name: Create and start containers
+      community.docker.docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        state: started
+        command: sleep infinity
+        privileged: true
+        tty: true
+        detach: true
+      loop:
+        - { name: "ubuntu_latest",   image: "ubuntu:latest" }
+        - { name: "oraclelinux8",    image: "oraclelinux:8" }
